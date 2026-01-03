@@ -9,12 +9,7 @@
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-surface-midi.git",
 	"bugs": "https://github.com/bitfocus/companion-surface-midi/issues",
-	"maintainers": [
-		{
-			"name": "Julian Waller",
-			"email": "git@julusian.co.uk"
-		}
-	],
+	"maintainers": [],
 	"runtime": {
 		"type": "node22",
 		"apiVersion": "0.0.0",
