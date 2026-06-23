@@ -6,6 +6,11 @@ export function createSurfaceSchema(layout: MidiLayoutDefinition): SurfaceSchema
 		stylePresets: {
 			default: {
 				colors: 'hex',
+				bitmap: {
+					w: 8,
+					h: 8,
+					format: 'rgb',
+				},
 			},
 		},
 		controls: {},

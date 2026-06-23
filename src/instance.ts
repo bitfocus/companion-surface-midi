@@ -1,15 +1,17 @@
 import {
+	assertNever,
 	CardGenerator,
+	createModuleLogger,
 	HostCapabilities,
+	parseColor,
+	RgbColor,
 	SurfaceDrawProps,
 	SurfaceContext,
 	SurfaceInstance,
 	ModuleLogger,
-	createModuleLogger,
-	assertNever,
 } from '@companion-surface/base'
 import type { Input, Output } from '@julusian/midi'
-// import { createControlId, parseControlId } from './util.js'
+import { parseControlId, createControlId } from './util.js'
 import { MidiButtonDefinition, MidiLayoutDefinition } from './tmp-layout.js'
 
 export class MidiWrapper implements SurfaceInstance {
@@ -19,17 +21,17 @@ export class MidiWrapper implements SurfaceInstance {
 	readonly #output: Output | undefined
 	readonly #portName: string
 	readonly #surfaceId: string
-	// readonly #layout: MidiLayoutDefinition
 	// readonly #context: SurfaceContext
+	readonly #layout: MidiLayoutDefinition
 
 	readonly #noteOnOffListeners: Map<number, MidiButtonDefinition> = new Map()
 	readonly #ccListeners: Map<number, MidiButtonDefinition> = new Map()
 
-	// /**
-	//  * Last drawn colours, to allow resending when brightness changes
-	//  */
-	// readonly #lastColours: Record<string, RgbColor> = {}
-	// #brightness: number = 50
+	/**
+	 * Last drawn colours, to allow resending when brightness changes
+	 */
+	readonly #lastColours: Record<string, RgbColor> = {}
+	#brightness: number = 100
 
 	public get surfaceId(): string {
 		return this.#surfaceId
@@ -46,13 +48,13 @@ export class MidiWrapper implements SurfaceInstance {
 		context: SurfaceContext,
 		layout: MidiLayoutDefinition,
 	) {
-		this.#logger = createModuleLogger(`Framework/${surfaceId}`)
+		this.#logger = createModuleLogger(`Instance/${surfaceId}`)
 		this.#input = input
 		this.#output = output
 		this.#portName = portName
 		this.#surfaceId = surfaceId
 		// this.#context = context
-		// this.#layout = layout
+		this.#layout = layout
 
 		// Future: could there be multiple listeners for one note?
 		for (const button of layout.buttons) {
@@ -61,6 +63,7 @@ export class MidiWrapper implements SurfaceInstance {
 					this.#noteOnOffListeners.set(button.note, button)
 					break
 				case 'cc':
+				case 'cc-encoder':
 					this.#ccListeners.set(button.note, button)
 					break
 				default:
@@ -70,46 +73,118 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		}
 
+		// Extra buttons that are not really buttons, but just helpful tools
+		for (const button of layout.extra_buttons) {
+			switch (button.type) {
+				case 'noteon':
+					this.#noteOnOffListeners.set(button.note, button)
+					break
+				case 'cc':
+					this.#ccListeners.set(button.note, button)
+					break
+			}
+		}
+
+		// As of right now, the current version of the midi package does not do this, still waiting for that new version to come out!
+		this.#input.on('message', (deltaTime, message) => {
+			// this.#logger.debug(`m: ${message} d: ${deltaTime}`)
+			const channel = message[0] & 0x0f
+			const type = message[0] & 0xf0
+			if (type === 0x90) input.emit('noteon', message[1], message[2], { channel, deltaTime })
+			else if (type === 0x80) input.emit('noteoff', message[1], message[2], { channel, deltaTime })
+			else if (type === 0xb0) input.emit('cc', message[1], message[2], { channel, deltaTime })
+		})
+
+		// / @ts-expect-error no types for message
 		// this.#input.on('messageBuffer', (deltaTime, message) => {
-		// 	console.log(`MIDI message received: ${message.toString('hex')} (Delta time: ${deltaTime})`)
+		// 	this.#logger.debug(`MIDI message received: ${message.toString('hex')} (Delta time: ${deltaTime})`)
 		// })
+		// @ts-expect-error no types for message
 		this.#input.on('noteon', (note, velocity, info) => {
-			console.log(`MIDI noteon received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
+			this.#logger.debug(`MIDI noteon received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
+
 			const listener = this.#noteOnOffListeners.get(note)
 			if (!listener) return
 
 			if (listener.type === 'noteon') {
-				if (velocity > 0) {
-					context.keyDownById(listener.id)
-				} else {
+				if (listener.row > -1) {
+					if (velocity > 0) {
+						context.keyDownById(listener.id)
+					} else {
+						context.keyUpById(listener.id)
+					}
+				} else if (velocity > 0) {
+					// Extra buttons
+					if (this.#layout.canChangePage) {
+						if (listener.id === 'page-left') context.changePage(false)
+						else if (listener.id === 'page-right') context.changePage(true)
+					}
+				}
+			}
+		})
+		// @ts-expect-error no types for message
+		this.#input.on('noteoff', (note, velocity, info) => {
+			this.#logger.debug(`MIDI noteoff received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
+
+			const listener = this.#noteOnOffListeners.get(note)
+			if (!listener) return
+
+			if (listener.type === 'noteon') {
+				if (listener.row > -1) {
 					context.keyUpById(listener.id)
 				}
 			}
 		})
+
+		const valuesPots: { [id: string]: number } = {}
+		// @ts-expect-error no types for message
 		this.#input.on('cc', (param, value, info) => {
-			console.log(`MIDI cc received: param=${param} value=${value} info=${JSON.stringify(info)}`)
+			this.#logger.debug(`MIDI cc received: param=${param} value=${value} info=${JSON.stringify(info)}`)
 
 			const listener = this.#ccListeners.get(param)
 			if (!listener) return
 
 			if (listener.type === 'cc') {
-				if (value > 0) {
-					context.keyDownById(listener.id)
-				} else {
-					context.keyUpById(listener.id)
+				if (listener.row > -1) {
+					if (value > 0) {
+						context.keyDownById(listener.id)
+					} else {
+						context.keyUpById(listener.id)
+					}
+				} else if (value > 0) {
+					// Extra buttons
+					if (this.#layout.canChangePage) {
+						if (listener.id === 'page-left') context.changePage(false)
+						else if (listener.id === 'page-right') context.changePage(true)
+					}
+				}
+			} else if (listener.type === 'cc-encoder') {
+				if (valuesPots[listener.id] === undefined) valuesPots[listener.id] = value
+				const delta = value - valuesPots[listener.id]
+				valuesPots[listener.id] = value
+				if (delta > 0) {
+					context.rotateRightById(listener.id)
+				} else if (delta < 0) {
+					context.rotateLeftById(listener.id)
 				}
 			}
 		})
 
+		// / @ts-expect-error no types for message
 		// this.#device.on('error', (e) => context.disconnect(e))
 	}
 
 	async init(): Promise<void> {
-		// Start with blanking it
+		// Start by blanking it
 		await this.blank()
 	}
+
 	async close(): Promise<void> {
 		await this.#clearPanel().catch(() => null)
+		if (this.#output) {
+			const commands = this.#layout.command_shutdown()
+			for (const command of commands) this.#output.sendMessage(command)
+		}
 
 		this.#input.closePort()
 		this.#input.destroy()
@@ -121,50 +196,71 @@ export class MidiWrapper implements SurfaceInstance {
 		// Not used
 	}
 
+	async updateConfig(_config: Record<string, any>): Promise<void> {
+		// Not used
+	}
+
 	async ready(): Promise<void> {}
 
 	async setBrightness(percent: number): Promise<void> {
-		// this.#brightness = percent
-		// for (let y = 0; y < MACROPAD_ROWS; y++) {
-		// 	for (let x = 0; x < MACROPAD_COLUMNS; x++) {
-		// 		const color = this.#lastColours[createControlId(y, x)] ?? { r: 0, g: 0, b: 0 }
-		// 		this.#writeKeyColour(x, y, color)
-		// 	}
-		// }
+		this.#brightness = this.#layout.supportsBrightness ? percent : 100
+		for (const btn of this.#layout.buttons) {
+			const color = this.#lastColours[createControlId(btn.row, btn.column)] ?? { r: 0, g: 0, b: 0 }
+			this.#writeKeyColour(btn.column, btn.row, color)
+		}
 	}
+
 	async blank(): Promise<void> {
 		await this.#clearPanel()
 	}
+
 	async draw(_signal: AbortSignal, drawProps: SurfaceDrawProps): Promise<void> {
-		// const color = drawProps.color ? parseColor(drawProps.color) : { r: 0, g: 0, b: 0 }
-		// this.#lastColours[drawProps.controlId] = color
-		// const pos = parseControlId(drawProps.controlId)
-		// this.#writeKeyColour(pos.column, pos.row, color)
+		let color = drawProps.color ? parseColor(drawProps.color) : { r: 0, g: 0, b: 0 }
+		// Grab bitmap one pixel color if provided. This will make sure we can kind of provide a color change when pressed...
+		if (drawProps.image && drawProps.image.length >= 3) {
+			color = {
+				r: drawProps.image[0],
+				g: drawProps.image[1],
+				b: drawProps.image[2],
+			}
+			if (this.#layout.isColorTooBlack?.(color)) {
+				color = {
+					r: drawProps.image[drawProps.image.length - 3],
+					g: drawProps.image[drawProps.image.length - 2],
+					b: drawProps.image[drawProps.image.length - 1],
+				}
+			}
+
+			// for debugging purposes
+			drawProps.image = new Uint8Array([
+				...drawProps.image.slice(0, 3),
+				...drawProps.image.slice(drawProps.image.length - 3, drawProps.image.length),
+			])
+		}
+		this.#logger.debug(JSON.stringify(drawProps) + ' -> ' + JSON.stringify(color))
+		this.#lastColours[drawProps.controlId] = color
+
+		const pos = parseControlId(drawProps.controlId)
+		this.#writeKeyColour(pos.column, pos.row, color)
 	}
 
-	// #writeKeyColour(x: number, y: number, color: RgbColor): void {
-	// 	const fillBuffer = Buffer.alloc(32)
-	// 	fillBuffer.writeUint8(0x0f, 0)
-	// 	fillBuffer.writeUint8(x + 1, 1)
-	// 	fillBuffer.writeUint8(y + 1, 2)
+	#writeKeyColour(x: number, y: number, color: RgbColor): void {
+		if (this.#layout.supportsBrightness) {
+			const scale = (this.#brightness || 100) / 100
+			color = { r: color.r * scale, g: color.g * scale, b: color.b * scale }
+		}
 
-	// 	const scale = (this.#brightness || 50) / 100
-	// 	fillBuffer.writeUint8(color.r * scale, 3)
-	// 	fillBuffer.writeUint8(color.g * scale, 4)
-	// 	fillBuffer.writeUint8(color.b * scale, 5)
-
-	// 	this.#device.write(fillBuffer).catch((e) => {
-	// 		this.#logger.error(`write failed: ${e}`)
-	// 	})
-	// }
+		const fillBuffer = this.#layout.command_writeKeyColour(x, y, color)
+		if (this.#output && fillBuffer.length > 0) this.#output.sendMessage(fillBuffer)
+	}
 
 	async #clearPanel(): Promise<void> {
-		// const clearBuffer = Buffer.alloc(32)
-		// clearBuffer.writeUint8(0x0b, 0)
-		// await this.#device.write(clearBuffer)
+		if (!this.#output) return
+		const commands = this.#layout.command_clearPanel()
+		for (const command of commands) this.#output.sendMessage(command)
 	}
 
-	async showStatus(_signal: AbortSignal, _cardGenerator: CardGenerator): Promise<void> {
+	async showStatus(_signal: AbortSignal, _cardGenerator: CardGenerator, _statusMessage: string): Promise<void> {
 		// Nothing to display here
 		// TODO - do some flashing lights to indicate each status?
 	}
