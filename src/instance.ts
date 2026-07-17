@@ -163,9 +163,9 @@ export class MidiWrapper implements SurfaceInstance {
 				const delta = value - valuesPots[listener.id]
 				valuesPots[listener.id] = value
 				if (delta > 0) {
-					context.rotateRightById(listener.id)
+					for (let i = 0; i < delta; i++) context.rotateRightById(listener.id)
 				} else if (delta < 0) {
-					context.rotateLeftById(listener.id)
+					for (let i = 0; i < -delta; i++) context.rotateLeftById(listener.id)
 				}
 			}
 		})
