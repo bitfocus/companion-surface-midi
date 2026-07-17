@@ -588,9 +588,8 @@ const NovationLaunchpadProMK3Layout: MidiLayoutDefinition = {
 }
 */
 
-// TODO still needs testing
-// @ts-expect-error ignore not used
-const _NovationLaunchpadMiniMK3Layout: MidiLayoutDefinition = {
+// Works
+const NovationLaunchpadMiniMK3Layout: MidiLayoutDefinition = {
 	...NovationLaunchpadXMK3Layout, // same layout
 	command_clearPanel: function () {
 		// Turn on programmer mode
@@ -924,16 +923,21 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 	},
 
 	// Launchpad Mini MK3
+	// - Linux:
+	'/Launchpad Mini MK3:Launchpad Mini MK3 LPMiniMK3 MI ([0-9]+):1/': {
+		outputName: undefined, // Uses same name as input
+		layout: NovationLaunchpadMiniMK3Layout,
+	},
 	// - Windows:
-	// 'Launchpad Mini MK3': {
-	// 	outputName: undefined, // Uses same name as input
-	// 	layout: NovationLaunchpadMiniMK3Layout,
-	// },
+	'LPMiniMK3 MIDI': {
+		outputName: undefined, // Uses same name as input
+		layout: NovationLaunchpadMiniMK3Layout,
+	},
 
 	// Launchpad Pro MK3
 	// - Windows:
-	// 'MIDIIN2 (LPX MIDI)': {
-	// 	outputName: 'MIDIOUT2 (LPX MIDI)',
+	// '???': {
+	// 	outputName: '???',
 	// 	layout: NovationLaunchpadProMK3Layout,
 	// },
 
@@ -983,10 +987,6 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 		outputName: undefined, // Uses same name as input
 		layout: AkaiAPCMiniMK2Layout,
 	},
-	// 'MIDIIN2 (APC mini mk2)': {
-	// 	outputName: 'MIDIOUT2 (APC mini mk2)',
-	// 	layout: AkaiAPCMiniMK2Layout,
-	// },
 
 	// Akai LPD8 MK2
 	// - Windows:
@@ -1005,9 +1005,11 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 
 export const DeviceMappingsWithRegex: { regex: RegExp; name: string }[] = Object.keys(DeviceMappings)
 	.map((name) => {
-		if (!name.startsWith('/')) return undefined
+		// Only include regex'ed port names, skip the rest:
+		if (!(name.startsWith('/') && name.endsWith('/'))) return undefined
 		try {
-			return { regex: new RegExp(name.substring(1, name.length - 1)), name }
+			// Make sure to match the WHOLE string, instead of doing a contains, by adding the ^ and $ and the m flag
+			return { regex: new RegExp('^' + name.substring(1, name.length - 1) + '$', 'm'), name }
 		} catch (e) {
 			console.error('Regex failure for "' + name + '". error being:', e)
 			return undefined

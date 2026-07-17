@@ -51,6 +51,8 @@ The port names vary in format by platform;
   - Launchpad Mini MK2: `Launchpad Mini:Launchpad Mini MIDI 1 ([0-9]+):0` is common
   - Launchpad Pro MK2: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
   - Launchpad MK2: `Launchpad MK2:Launchpad MK2 MIDI 1 ([0-9]+):0`
+  - Launchpad Mini MK3: `Launchpad Mini MK3:Launchpad Mini MK3 LPMiniMK3 MI ([0-9]+):1`
+  - Launchpad Pro MK3: ???
   - Launchpad X: ???
   - Launchkey Mini MK3:
     - `Launchkey Mini MK3:Launchkey Mini MK3 MIDI 2 ([0-9]+):1` OR `Launchkey Mini MK3:Launchkey Mini MK3 Launchkey Mi ([0-9]+):1`
@@ -62,11 +64,12 @@ The port names vary in format by platform;
   - Launchpad Mini MK2: ???
   - Launchpad Pro MK2: `Launchpad Pro` (input and output)
   - Launchpad MK2: `Launchpad MK2` (input and output)
-  - Launchpad X: `MIDIIN2 (LPX MIDI)` with output `MIDIOUT2 (LPX MIDI)`
+  - Launchpad Mini MK3: `LPMiniMK3 MIDI` (input and output)
+  - Launchpad Pro MK3: ???
+  - Launchpad X: `LPX MIDI` (input and output)
   - Launchkey Mini MK3: `MIDIIN2 (Launchkey Mini MK3)` with output `MIDIOUT2 (Launchkey Mini MK3)` for DAW control
   - LaunchControl: `Launch Control 2` (input and output)
   - Akai LPD8 MK2: `LPD8 mk2` (input and output)
   - Akai APC Mini: `APC MINI` (input and output)
-  - Akai APC Mini MK2: `MIDIIN2 (APC mini mk2)` with output `MIDIOUT2 (APC mini mk2)`
-    - OR `APC mini mk2` (input and output) likely 'better'
+  - Akai APC Mini MK2: `APC mini mk2` (input and output)
   - Akai MPK mini 3: `MPK mini 3` (input and output)
