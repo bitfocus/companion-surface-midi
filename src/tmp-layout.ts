@@ -1,6 +1,6 @@
 import { RgbColor } from '@companion-surface/base'
 import { MidiMessage } from '@julusian/midi'
-import { getClosestApcMiniColor, getClosestLpColor } from './util.js'
+import { getClosestApcColor, getClosestApcMiniColor, getClosestLpColor } from './util.js'
 
 export interface MidiLayoutDefinition {
 	supportsBrightness: boolean
@@ -848,6 +848,88 @@ const AkaiAPCMiniLayout: MidiLayoutDefinition = {
 	},
 }
 
+const AkaiAPC40MK2Layout: MidiLayoutDefinition = {
+	// https://cdn.inmusicbrands.com/akai/attachments/apc40II/APC40Mk2_Communications_Protocol_v1.2.pdf
+	...AkaiAPCMiniLayout,
+	supportsBrightness: false, // NOPE, requires different channel
+	canChangePage: {
+		label: 'Bank left and right change Page',
+	},
+	buttons: [
+		// Row 1
+		{ id: '0/0', row: 0, column: 0, type: 'noteon', channel: 0, note: 32 },
+		{ id: '0/1', row: 0, column: 1, type: 'noteon', channel: 0, note: 33 },
+		{ id: '0/2', row: 0, column: 2, type: 'noteon', channel: 0, note: 34 },
+		{ id: '0/3', row: 0, column: 3, type: 'noteon', channel: 0, note: 35 },
+		{ id: '0/4', row: 0, column: 4, type: 'noteon', channel: 0, note: 36 },
+		{ id: '0/5', row: 0, column: 5, type: 'noteon', channel: 0, note: 37 },
+		{ id: '0/6', row: 0, column: 6, type: 'noteon', channel: 0, note: 38 },
+		{ id: '0/7', row: 0, column: 7, type: 'noteon', channel: 0, note: 39 },
+
+		// Row 2
+		{ id: '1/0', row: 1, column: 0, type: 'noteon', channel: 0, note: 24 },
+		{ id: '1/1', row: 1, column: 1, type: 'noteon', channel: 0, note: 25 },
+		{ id: '1/2', row: 1, column: 2, type: 'noteon', channel: 0, note: 26 },
+		{ id: '1/3', row: 1, column: 3, type: 'noteon', channel: 0, note: 27 },
+		{ id: '1/4', row: 1, column: 4, type: 'noteon', channel: 0, note: 28 },
+		{ id: '1/5', row: 1, column: 5, type: 'noteon', channel: 0, note: 29 },
+		{ id: '1/6', row: 1, column: 6, type: 'noteon', channel: 0, note: 30 },
+		{ id: '1/7', row: 1, column: 7, type: 'noteon', channel: 0, note: 31 },
+
+		// Row 3
+		{ id: '2/0', row: 2, column: 0, type: 'noteon', channel: 0, note: 16 },
+		{ id: '2/1', row: 2, column: 1, type: 'noteon', channel: 0, note: 17 },
+		{ id: '2/2', row: 2, column: 2, type: 'noteon', channel: 0, note: 18 },
+		{ id: '2/3', row: 2, column: 3, type: 'noteon', channel: 0, note: 19 },
+		{ id: '2/4', row: 2, column: 4, type: 'noteon', channel: 0, note: 20 },
+		{ id: '2/5', row: 2, column: 5, type: 'noteon', channel: 0, note: 21 },
+		{ id: '2/6', row: 2, column: 6, type: 'noteon', channel: 0, note: 22 },
+		{ id: '2/7', row: 2, column: 7, type: 'noteon', channel: 0, note: 23 },
+
+		// Row 4
+		{ id: '3/0', row: 3, column: 0, type: 'noteon', channel: 0, note: 8 },
+		{ id: '3/1', row: 3, column: 1, type: 'noteon', channel: 0, note: 9 },
+		{ id: '3/2', row: 3, column: 2, type: 'noteon', channel: 0, note: 10 },
+		{ id: '3/3', row: 3, column: 3, type: 'noteon', channel: 0, note: 11 },
+		{ id: '3/4', row: 3, column: 4, type: 'noteon', channel: 0, note: 12 },
+		{ id: '3/5', row: 3, column: 5, type: 'noteon', channel: 0, note: 13 },
+		{ id: '3/6', row: 3, column: 6, type: 'noteon', channel: 0, note: 14 },
+		{ id: '3/7', row: 3, column: 7, type: 'noteon', channel: 0, note: 15 },
+
+		// Row 5
+		{ id: '4/0', row: 4, column: 0, type: 'noteon', channel: 0, note: 0 },
+		{ id: '4/1', row: 4, column: 1, type: 'noteon', channel: 0, note: 1 },
+		{ id: '4/2', row: 4, column: 2, type: 'noteon', channel: 0, note: 2 },
+		{ id: '4/3', row: 4, column: 3, type: 'noteon', channel: 0, note: 3 },
+		{ id: '4/4', row: 4, column: 4, type: 'noteon', channel: 0, note: 4 },
+		{ id: '4/5', row: 4, column: 5, type: 'noteon', channel: 0, note: 5 },
+		{ id: '4/6', row: 4, column: 6, type: 'noteon', channel: 0, note: 6 },
+		{ id: '4/7', row: 4, column: 7, type: 'noteon', channel: 0, note: 7 },
+	],
+	extra_buttons: [
+		{ id: 'page-left', row: -1, column: -1, type: 'noteon', channel: 0, note: 0x3c },
+		{ id: 'page-right', row: -1, column: -1, type: 'noteon', channel: 0, note: 0x3d },
+	],
+	command_clearPanel: function () {
+		const deviceId = 0
+		// 0x41 = Ableton mode
+		return [[0xf0, 0x47, deviceId, 0x29, 0x60, 0x00, 0x04, 0x41, 0x01, 0x00, 0x00, 0xf7]]
+	},
+	command_shutdown: function () {
+		return [[]]
+	},
+	command_writeKeyColour: function (x, y, color) {
+		const button = this.buttons.find((btn) => btn.row === y && btn.column === x)
+		if (!button) return []
+
+		const lpColorIndex = getClosestApcColor(color) // There's only three colors!
+		return [(button.type === 'noteon' ? 0x90 : 0xb0) | (button.channel & 0x0f), button.note & 0x7f, lpColorIndex & 0x7f]
+	},
+	isColorTooBlack: function (color) {
+		return getClosestApcColor(color) === 0
+	},
+}
+
 const AkaiMpkMiniMk3Layout: MidiLayoutDefinition = {
 	supportsBrightness: false, // doesn't even support color...
 	buttons: [
@@ -986,6 +1068,13 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 	'APC mini mk2': {
 		outputName: undefined, // Uses same name as input
 		layout: AkaiAPCMiniMK2Layout,
+	},
+
+	// Akai APC 40 mk2
+	// - Windows:
+	'APC40 mkII': {
+		outputName: undefined, // Uses same name as input
+		layout: AkaiAPC40MK2Layout,
 	},
 
 	// Akai LPD8 MK2

@@ -25,7 +25,7 @@
 	},
 	"dependencies": {
 		"@companion-surface/base": "^1.2.1",
-		"@julusian/midi": "^3.6.1"
+		"@julusian/midi": "^3.8.0"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.5.0",

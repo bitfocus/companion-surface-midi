@@ -85,21 +85,6 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		}
 
-		// As of right now, the current version of the midi package does not do this, still waiting for that new version to come out!
-		this.#input.on('message', (deltaTime, message) => {
-			// this.#logger.debug(`m: ${message} d: ${deltaTime}`)
-			const channel = message[0] & 0x0f
-			const type = message[0] & 0xf0
-			if (type === 0x90) input.emit('noteon', message[1], message[2], { channel, deltaTime })
-			else if (type === 0x80) input.emit('noteoff', message[1], message[2], { channel, deltaTime })
-			else if (type === 0xb0) input.emit('cc', message[1], message[2], { channel, deltaTime })
-		})
-
-		// / @ts-expect-error no types for message
-		// this.#input.on('messageBuffer', (deltaTime, message) => {
-		// 	this.#logger.debug(`MIDI message received: ${message.toString('hex')} (Delta time: ${deltaTime})`)
-		// })
-		// @ts-expect-error no types for message
 		this.#input.on('noteon', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteon received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
@@ -122,7 +107,6 @@ export class MidiWrapper implements SurfaceInstance {
 				}
 			}
 		})
-		// @ts-expect-error no types for message
 		this.#input.on('noteoff', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteoff received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
@@ -137,7 +121,6 @@ export class MidiWrapper implements SurfaceInstance {
 		})
 
 		const valuesPots: { [id: string]: number } = {}
-		// @ts-expect-error no types for message
 		this.#input.on('cc', (param, value, info) => {
 			this.#logger.debug(`MIDI cc received: param=${param} value=${value} info=${JSON.stringify(info)}`)
 
@@ -170,7 +153,6 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		})
 
-		// / @ts-expect-error no types for message
 		// this.#device.on('error', (e) => context.disconnect(e))
 	}
 

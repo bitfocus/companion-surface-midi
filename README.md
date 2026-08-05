@@ -6,9 +6,6 @@ This is a somwhat usable module.
 ~~In its current state it is able to work with a novation launchpad mini, translating it to a sensible layout. But it does not handle disconnection or reconnection, button rgb or anything more.~~  
 In its current state it is able to work with a Novation Launchpad MK2, Novation Launchpad Pro, Novation Launchpad X???, Novation Launchkey Mini MK3, Akai APC Mini MK1/MK2, translating it to a sensible layout. But it does not handle disconnection or reconnection. It does support button colors.
 
-~~Note: To get it to build you need to use a custom build of https://github.com/Julusian/node-midi/. There are some changes made to that library in parallel to this module, which have not yet been released (they will likely be in 3.7.0 once they have had more testing)~~  
-Current version just uses the v3.6 and just implemented the missing stuff manually.
-
 ## Design
 
 This is using a simple midi library to handle midi io.  
@@ -69,7 +66,8 @@ The port names vary in format by platform;
   - Launchpad X: `LPX MIDI` (input and output)
   - Launchkey Mini MK3: `MIDIIN2 (Launchkey Mini MK3)` with output `MIDIOUT2 (Launchkey Mini MK3)` for DAW control
   - LaunchControl: `Launch Control 2` (input and output)
-  - Akai LPD8 MK2: `LPD8 mk2` (input and output)
   - Akai APC Mini: `APC MINI` (input and output)
   - Akai APC Mini MK2: `APC mini mk2` (input and output)
+  - Akai APC40 MK2: `APC40 mkII` (input and output)
+  - Akai LPD8 MK2: `LPD8 mk2` (input and output)
   - Akai MPK mini 3: `MPK mini 3` (input and output)
