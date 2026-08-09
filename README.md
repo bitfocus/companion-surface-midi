@@ -1,10 +1,10 @@
 # companion-surface-midi
 
-This is a POC, and is not a finished or usable module. It is testing out some ideas on how a module could look, and could become the groundwork for a usable module.
+~~This is a POC, and is not a finished or usable module. It is testing out some ideas on how a module could look, and could become the groundwork for a usable module.~~  
+This is a somwhat usable module.
 
-In its current state it is able to work with a novation launchpad mini, translating it to a sensible layout. But it does not handle disconnection or reconnection, button rgb or anything more.
-
-Note: To get it to build you need to use a custom build of https://github.com/Julusian/node-midi/. There are some changes made to that library in parallel to this module, which have not yet been released (they will likely be in 3.7.0 once they have had more testing)
+~~In its current state it is able to work with a novation launchpad mini, translating it to a sensible layout. But it does not handle disconnection or reconnection, button rgb or anything more.~~  
+In its current state it is able to work with a Novation Launchpad MK2, Novation Launchpad Pro, Novation Launchpad X???, Novation Launchkey Mini MK3, Akai APC Mini MK1/MK2, translating it to a sensible layout. But it does not handle disconnection or reconnection. It does support button colors.
 
 ## Design
 
@@ -44,6 +44,32 @@ While developing the module, by using `yarn dev` the compiler will be run in wat
 
 The port names vary in format by platform;
 
-- On linux: `Launchpad Mini:Launchpad Mini MIDI 1 24:0` is common
-- On macos: TODO
-- On windows: TODO
+- On linux:
+  - Launchpad Mini MK2: `Launchpad Mini:Launchpad Mini MIDI 1 ([0-9]+):0` is common
+  - Launchpad Pro MK2: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
+  - Launchpad MK2: `Launchpad MK2:Launchpad MK2 MIDI 1 ([0-9]+):0`
+  - Launchpad Mini MK3: `Launchpad Mini MK3:Launchpad Mini MK3 LPMiniMK3 MI ([0-9]+):1`
+  - Launchpad Pro MK3: ???
+  - Launchpad X: ???
+  - Launchkey Mini MK3:
+    - `Launchkey Mini MK3:Launchkey Mini MK3 MIDI 2 ([0-9]+):1` OR `Launchkey Mini MK3:Launchkey Mini MK3 Launchkey Mi ([0-9]+):1`
+  - Akai APC Mini: `APC MINI:APC MINI MIDI 1 ([0-9]+):0`
+  - Akai MIDI mix: `MIDI Mix:MIDI Mix MIDI 1 ([0-9]+):0`
+- On macos:
+  - Launchpad X: ???
+  - LaunchControl: ???
+- On windows:
+  - Launchpad Mini MK2: ???
+  - Launchpad Pro MK2: `Launchpad Pro` (input and output)
+  - Launchpad MK2: `Launchpad MK2` (input and output)
+  - Launchpad Mini MK3: `LPMiniMK3 MIDI` (input and output)
+  - Launchpad Pro MK3: ???
+  - Launchpad X: `LPX MIDI` (input and output)
+  - Launchkey Mini MK3: `MIDIIN2 (Launchkey Mini MK3)` with output `MIDIOUT2 (Launchkey Mini MK3)` for DAW control
+  - LaunchControl: `Launch Control 2` (input and output)
+  - Akai APC Mini: `APC MINI` (input and output)
+  - Akai APC Mini MK2: `APC mini mk2` (input and output)
+  - Akai APC40 MK2: `APC40 mkII` (input and output)
+  - Akai LPD8 MK2: `LPD8 mk2` (input and output)
+  - Akai MPK mini 3: `MPK mini 3` (input and output)
+  - Akai MIDI mix: `MIDI Mix ` (input and output)

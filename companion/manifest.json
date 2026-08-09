@@ -20,7 +20,7 @@
 	"usbIds": [
 		{
 			"vendorId": 4661,
-			"productIds": [54]
+			"productIds": [54, 258]
 		}
 	]
 }
