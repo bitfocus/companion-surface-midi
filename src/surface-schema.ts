@@ -1,5 +1,6 @@
 import type { SurfaceSchemaLayoutDefinition } from '@companion-surface/base'
 import { MidiLayoutDefinition } from './tmp-layout.js'
+import { parseControlId } from './util.js'
 
 export function createSurfaceSchema(layout: MidiLayoutDefinition): SurfaceSchemaLayoutDefinition {
 	const surfaceLayout: SurfaceSchemaLayoutDefinition = {
@@ -17,10 +18,10 @@ export function createSurfaceSchema(layout: MidiLayoutDefinition): SurfaceSchema
 	}
 
 	for (const button of layout.buttons) {
+		const { row, column } = parseControlId(button.id)
 		surfaceLayout.controls[button.id] = {
-			row: button.row,
-			column: button.column,
-			// TODO - style?
+			row: row,
+			column: column,
 		}
 	}
 

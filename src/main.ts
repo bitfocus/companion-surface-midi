@@ -111,6 +111,7 @@ const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
 					canChangePage: layout.canChangePage,
 					surfaceLayout: createSurfaceSchema(layout),
 					pincodeMap: createPincodeMap(layout),
+					transferVariables: layout.transferVariables ?? [],
 					configFields: null,
 					location: null,
 				},

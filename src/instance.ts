@@ -11,7 +11,7 @@ import {
 	ModuleLogger,
 } from '@companion-surface/base'
 import type { Input, Output } from '@julusian/midi'
-import { parseControlId, createControlId } from './util.js'
+import { parseControlId } from './util.js'
 import { MidiButtonDefinition, MidiLayoutDefinition } from './tmp-layout.js'
 
 export class MidiWrapper implements SurfaceInstance {
@@ -58,13 +58,15 @@ export class MidiWrapper implements SurfaceInstance {
 
 		// Future: could there be multiple listeners for one note?
 		for (const button of layout.buttons) {
+			const noteIdx = button.channel * 128 + button.note
 			switch (button.type) {
 				case 'noteon':
-					this.#noteOnOffListeners.set(button.note, button)
+				case 'noteon-encoder':
+					this.#noteOnOffListeners.set(noteIdx, button)
 					break
 				case 'cc':
 				case 'cc-encoder':
-					this.#ccListeners.set(button.note, button)
+					this.#ccListeners.set(noteIdx, button)
 					break
 				default:
 					assertNever(button.type)
@@ -74,13 +76,37 @@ export class MidiWrapper implements SurfaceInstance {
 		}
 
 		// Extra buttons that are not really buttons, but just helpful tools
-		for (const button of layout.extra_buttons) {
+		for (const button of layout.extraButtons ?? []) {
+			const noteIdx = button.channel * 128 + button.note
 			switch (button.type) {
 				case 'noteon':
-					this.#noteOnOffListeners.set(button.note, button)
+				case 'noteon-encoder':
+					this.#noteOnOffListeners.set(noteIdx, button)
 					break
 				case 'cc':
-					this.#ccListeners.set(button.note, button)
+				case 'cc-encoder':
+					this.#ccListeners.set(noteIdx, button)
+					break
+				default:
+					assertNever(button.type)
+					this.#logger.warn(`Unknown button in layout: ${button.id}`)
+					break
+			}
+		}
+
+		// Extra buttons that are not really buttons, but just helpful tools
+		for (const variable of layout.transferVariables ?? []) {
+			const button: MidiButtonDefinition = {
+				...variable,
+				type: (variable.msg_type + '-encoder') as 'cc-encoder' | 'noteon-encoder',
+			}
+			const noteIdx = button.channel * 128 + button.note
+			switch (variable.msg_type) {
+				case 'noteon':
+					this.#noteOnOffListeners.set(noteIdx, button)
+					break
+				case 'cc':
+					this.#ccListeners.set(noteIdx, button)
 					break
 			}
 		}
@@ -88,11 +114,13 @@ export class MidiWrapper implements SurfaceInstance {
 		this.#input.on('noteon', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteon received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
-			const listener = this.#noteOnOffListeners.get(note)
+			const noteIdx = info.channel * 128 + note
+			const listener = this.#noteOnOffListeners.get(noteIdx)
 			if (!listener) return
 
 			if (listener.type === 'noteon') {
-				if (listener.row > -1) {
+				const { row } = parseControlId(listener.id)
+				if (!isNaN(row)) {
 					if (velocity > 0) {
 						context.keyDownById(listener.id)
 					} else {
@@ -101,34 +129,41 @@ export class MidiWrapper implements SurfaceInstance {
 				} else if (velocity > 0) {
 					// Extra buttons
 					if (this.#layout.canChangePage) {
-						if (listener.id === 'page-left') context.changePage(false)
-						else if (listener.id === 'page-right') context.changePage(true)
+						if (listener.id === 'page/left') context.changePage(false)
+						else if (listener.id === 'page/right') context.changePage(true)
 					}
 				}
+			} else if (listener.type === 'noteon-encoder') {
+				context.sendVariableValue(listener.id, velocity)
 			}
 		})
 		this.#input.on('noteoff', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteoff received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
-			const listener = this.#noteOnOffListeners.get(note)
+			const noteIdx = info.channel * 128 + note
+			const listener = this.#noteOnOffListeners.get(noteIdx)
 			if (!listener) return
 
 			if (listener.type === 'noteon') {
-				if (listener.row > -1) {
+				const { row } = parseControlId(listener.id)
+				if (!isNaN(row)) {
 					context.keyUpById(listener.id)
 				}
+			} else if (listener.type === 'noteon-encoder') {
+				context.sendVariableValue(listener.id, velocity)
 			}
 		})
 
-		const valuesPots: { [id: string]: number } = {}
 		this.#input.on('cc', (param, value, info) => {
 			this.#logger.debug(`MIDI cc received: param=${param} value=${value} info=${JSON.stringify(info)}`)
 
-			const listener = this.#ccListeners.get(param)
+			const noteIdx = info.channel * 128 + param
+			const listener = this.#ccListeners.get(noteIdx)
 			if (!listener) return
 
 			if (listener.type === 'cc') {
-				if (listener.row > -1) {
+				const { row } = parseControlId(listener.id)
+				if (!isNaN(row)) {
 					if (value > 0) {
 						context.keyDownById(listener.id)
 					} else {
@@ -137,19 +172,18 @@ export class MidiWrapper implements SurfaceInstance {
 				} else if (value > 0) {
 					// Extra buttons
 					if (this.#layout.canChangePage) {
-						if (listener.id === 'page-left') context.changePage(false)
-						else if (listener.id === 'page-right') context.changePage(true)
+						if (listener.id === 'page/left') context.changePage(false)
+						else if (listener.id === 'page/right') context.changePage(true)
 					}
 				}
 			} else if (listener.type === 'cc-encoder') {
-				if (valuesPots[listener.id] === undefined) valuesPots[listener.id] = value
-				const delta = value - valuesPots[listener.id]
-				valuesPots[listener.id] = value
-				if (delta > 0) {
-					for (let i = 0; i < delta; i++) context.rotateRightById(listener.id)
-				} else if (delta < 0) {
-					for (let i = 0; i < -delta; i++) context.rotateLeftById(listener.id)
-				}
+				context.sendVariableValue(listener.id, value)
+			}
+		})
+
+		this.#input.on('sysex', (bytes) => {
+			if (this.#layout.parseSysex) {
+				this.#layout.parseSysex(context, bytes)
 			}
 		})
 
@@ -187,8 +221,8 @@ export class MidiWrapper implements SurfaceInstance {
 	async setBrightness(percent: number): Promise<void> {
 		this.#brightness = this.#layout.supportsBrightness ? percent : 100
 		for (const btn of this.#layout.buttons) {
-			const color = this.#lastColours[createControlId(btn.row, btn.column)] ?? { r: 0, g: 0, b: 0 }
-			this.#writeKeyColour(btn.column, btn.row, color)
+			const color = this.#lastColours[btn.id] ?? { r: 0, g: 0, b: 0 }
+			this.#writeKeyColour(btn.id, color)
 		}
 	}
 
@@ -222,17 +256,16 @@ export class MidiWrapper implements SurfaceInstance {
 		this.#logger.debug(JSON.stringify(drawProps) + ' -> ' + JSON.stringify(color))
 		this.#lastColours[drawProps.controlId] = color
 
-		const pos = parseControlId(drawProps.controlId)
-		this.#writeKeyColour(pos.column, pos.row, color)
+		this.#writeKeyColour(drawProps.controlId, color)
 	}
 
-	#writeKeyColour(x: number, y: number, color: RgbColor): void {
+	#writeKeyColour(controlId: string, color: RgbColor): void {
 		if (this.#layout.supportsBrightness) {
 			const scale = (this.#brightness || 100) / 100
 			color = { r: color.r * scale, g: color.g * scale, b: color.b * scale }
 		}
 
-		const fillBuffer = this.#layout.command_writeKeyColour(x, y, color)
+		const fillBuffer = this.#layout.command_writeKeyColour(controlId, color)
 		if (this.#output && fillBuffer.length > 0) this.#output.sendMessage(fillBuffer)
 	}
 
