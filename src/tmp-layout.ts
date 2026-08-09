@@ -11,7 +11,7 @@ export interface MidiLayoutDefinition {
 	command_clearPanel: () => MidiMessage[]
 	command_shutdown: () => MidiMessage[]
 	command_writeKeyColour: (controlId: string, color: RgbColor) => MidiMessage
-	isColorTooBlack?: (color: RgbColor) => boolean
+	isColorTooBlack: (color: RgbColor) => boolean
 	parseSysex?: (context: SurfaceContext, bytes: Buffer<ArrayBufferLike>) => void
 }
 
@@ -141,6 +141,9 @@ const NovationLaunchpadMiniLayoutTest: MidiLayoutDefinition = {
 		const { column: x, row: y } = parseControlId(controlId)
 		if (isNaN(x) || x < 0 || isNaN(y) || y < 0) return []
 		return [0x0f, (x + 1) & 0x7f, (y + 1) & 0x7f, color.r & 0x7f, color.g & 0x7f, color.b & 0x7f]
+	},
+	isColorTooBlack: function (color) {
+		return Math.floor(color.r / 32) === 0 && Math.floor(color.g / 32) === 0 && Math.floor(color.b / 32) === 0
 	},
 }
 
@@ -1330,10 +1333,329 @@ const AkaiMpkMiniMk3Layout: MidiLayoutDefinition = {
 	command_writeKeyColour: function (_controlId, _color) {
 		// Only being red... and cannot seem to color any surface...
 		return []
-		// const button = this.buttons.find((btn) => btn.id === controlId)
-		// if (!button) return []
-		// const colorIndex = color.r + color.g + color.g === 0 ? 0 : 0x7f
-		// return [(button.type === 'noteon' ? 0x90 : 0xb0) | (button.channel & 0x0f), button.note & 0x7f, colorIndex]
+	},
+	isColorTooBlack: function (_color) {
+		return false
+	},
+}
+
+const AkaiMIDImixLayout: MidiLayoutDefinition = {
+	// https://cdn.inmusicbrands.com/akai/attachments/MIDIMIX/MIDImix-UserGuide-v1.0.pdf
+	supportsBrightness: false, // doesn't even support color...
+	canChangePage: { label: 'Bank left/right change Page' },
+	buttons: [
+		// Row 1 - Mute
+		{ id: '0/0', type: 'noteon', channel: 0, note: 1 },
+		{ id: '0/1', type: 'noteon', channel: 0, note: 4 },
+		{ id: '0/2', type: 'noteon', channel: 0, note: 7 },
+		{ id: '0/3', type: 'noteon', channel: 0, note: 10 },
+		{ id: '0/4', type: 'noteon', channel: 0, note: 13 },
+		{ id: '0/5', type: 'noteon', channel: 0, note: 16 },
+		{ id: '0/6', type: 'noteon', channel: 0, note: 19 },
+		{ id: '0/7', type: 'noteon', channel: 0, note: 22 },
+
+		// Row 2 - Rec arm
+		{ id: '1/0', type: 'noteon', channel: 0, note: 3 },
+		{ id: '1/1', type: 'noteon', channel: 0, note: 6 },
+		{ id: '1/2', type: 'noteon', channel: 0, note: 9 },
+		{ id: '1/3', type: 'noteon', channel: 0, note: 12 },
+		{ id: '1/4', type: 'noteon', channel: 0, note: 15 },
+		{ id: '1/5', type: 'noteon', channel: 0, note: 18 },
+		{ id: '1/6', type: 'noteon', channel: 0, note: 21 },
+		{ id: '1/7', type: 'noteon', channel: 0, note: 24 },
+	],
+	extraButtons: [
+		{ id: 'page/left', type: 'noteon', channel: 0, note: 25 },
+		{ id: 'page/right', type: 'noteon', channel: 0, note: 26 },
+	],
+	transferVariables: [
+		{
+			id: '0/0',
+			name: 'Knob 1-1',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 16,
+		},
+		{
+			id: '0/1',
+			name: 'Knob 1-2',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 20,
+		},
+		{
+			id: '0/2',
+			name: 'Knob 1-3',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 24,
+		},
+		{
+			id: '0/3',
+			name: 'Knob 1-4',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 28,
+		},
+		{
+			id: '0/4',
+			name: 'Knob 1-5',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 46,
+		},
+		{
+			id: '0/5',
+			name: 'Knob 1-6',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 50,
+		},
+		{
+			id: '0/6',
+			name: 'Knob 1-7',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 54,
+		},
+		{
+			id: '0/7',
+			name: 'Knob 1-8',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 58,
+		},
+
+		{
+			id: '1/0',
+			name: 'Knob 2-1',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 17,
+		},
+		{
+			id: '1/1',
+			name: 'Knob 2-2',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 21,
+		},
+		{
+			id: '1/2',
+			name: 'Knob 2-3',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 25,
+		},
+		{
+			id: '1/3',
+			name: 'Knob 2-4',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 29,
+		},
+		{
+			id: '1/4',
+			name: 'Knob 2-5',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 47,
+		},
+		{
+			id: '1/5',
+			name: 'Knob 2-6',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 51,
+		},
+		{
+			id: '1/6',
+			name: 'Knob 2-7',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 55,
+		},
+		{
+			id: '1/7',
+			name: 'Knob 2-8',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 59,
+		},
+
+		{
+			id: '2/0',
+			name: 'Knob 3-1',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 18,
+		},
+		{
+			id: '2/1',
+			name: 'Knob 3-2',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 22,
+		},
+		{
+			id: '2/2',
+			name: 'Knob 3-3',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 26,
+		},
+		{
+			id: '2/3',
+			name: 'Knob 3-4',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 30,
+		},
+		{
+			id: '2/4',
+			name: 'Knob 3-5',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 48,
+		},
+		{
+			id: '2/5',
+			name: 'Knob 3-6',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 52,
+		},
+		{
+			id: '2/6',
+			name: 'Knob 3-7',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 56,
+		},
+		{
+			id: '2/7',
+			name: 'Knob 3-8',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 60,
+		},
+
+		// Faders
+		{
+			id: '3/0',
+			name: 'Fader 1',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 19,
+		},
+		{
+			id: '3/1',
+			name: 'Fader 2',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 23,
+		},
+		{
+			id: '3/2',
+			name: 'Fader 3',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 27,
+		},
+		{
+			id: '3/3',
+			name: 'Fader 4',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 31,
+		},
+		{
+			id: '3/4',
+			name: 'Fader 5',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 49,
+		},
+		{
+			id: '3/5',
+			name: 'Fader 6',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 53,
+		},
+		{
+			id: '3/6',
+			name: 'Fader 7',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 57,
+		},
+		{
+			id: '3/7',
+			name: 'Fader 8',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 61,
+		},
+		{
+			id: '3/8',
+			name: 'Master Fader',
+			type: 'input',
+			msg_type: 'cc',
+			channel: 0,
+			note: 62,
+		},
+	],
+	command_clearPanel: function () {
+		return [[]]
+	},
+	command_shutdown: function () {
+		return [[]]
+	},
+	command_writeKeyColour: function (controlId, color) {
+		const button = this.buttons.find((btn) => btn.id === controlId)
+		if (!button) return []
+
+		return [
+			(button.type === 'noteon' ? 0x90 : 0xb0) | (button.channel & 0x0f),
+			button.note & 0x7f,
+			this.isColorTooBlack(color) ? 0 : 127,
+		]
+	},
+	isColorTooBlack: function (color) {
+		return Math.floor(color.r / 64) === 0 && Math.floor(color.g / 64) === 0 && Math.floor(color.b / 64) === 0
 	},
 }
 
@@ -1454,6 +1776,18 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 	'MPK mini 3': {
 		outputName: undefined, // Uses same name as input
 		layout: AkaiMpkMiniMk3Layout,
+	},
+
+	// Akai MIDI mix
+	// - Linux:
+	'/MIDI Mix:MIDI Mix MIDI 1 ([0-9]+):0/': {
+		outputName: undefined, // Uses same name as input
+		layout: AkaiMIDImixLayout,
+	},
+	// - Windows:
+	'MIDI Mix': {
+		outputName: undefined, // Uses same name as input
+		layout: AkaiMIDImixLayout,
 	},
 }
 

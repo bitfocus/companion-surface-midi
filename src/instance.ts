@@ -111,6 +111,16 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		}
 
+		this.#input.on('message', (deltaTime, message) => {
+			// this.#logger.debug(`m: ${message} d: ${deltaTime}`)
+			const channel = message[0] & 0x0f
+			const type = message[0] & 0xf0
+			if (type === 0x90) input.emit('noteon', message[1], message[2], { channel, deltaTime })
+			else if (type === 0x80) input.emit('noteoff', message[1], message[2], { channel, deltaTime })
+			else if (type === 0xb0) input.emit('cc', message[1], message[2], { channel, deltaTime })
+		})
+
+		// @ts-expect-error yeah
 		this.#input.on('noteon', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteon received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
@@ -137,6 +147,7 @@ export class MidiWrapper implements SurfaceInstance {
 				context.sendVariableValue(listener.id, velocity)
 			}
 		})
+		// @ts-expect-error yeah
 		this.#input.on('noteoff', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteoff received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
@@ -154,6 +165,7 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		})
 
+		// @ts-expect-error yeah
 		this.#input.on('cc', (param, value, info) => {
 			this.#logger.debug(`MIDI cc received: param=${param} value=${value} info=${JSON.stringify(info)}`)
 
@@ -181,8 +193,10 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		})
 
+		// @ts-expect-error yeah
 		this.#input.on('sysex', (bytes) => {
 			if (this.#layout.parseSysex) {
+				// @ts-expect-error yeah
 				this.#layout.parseSysex(context, bytes)
 			}
 		})
@@ -239,7 +253,7 @@ export class MidiWrapper implements SurfaceInstance {
 				g: drawProps.image[1],
 				b: drawProps.image[2],
 			}
-			if (this.#layout.isColorTooBlack?.(color)) {
+			if (this.#layout.isColorTooBlack(color)) {
 				color = {
 					r: drawProps.image[drawProps.image.length - 3],
 					g: drawProps.image[drawProps.image.length - 2],

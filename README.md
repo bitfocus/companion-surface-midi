@@ -54,6 +54,7 @@ The port names vary in format by platform;
   - Launchkey Mini MK3:
     - `Launchkey Mini MK3:Launchkey Mini MK3 MIDI 2 ([0-9]+):1` OR `Launchkey Mini MK3:Launchkey Mini MK3 Launchkey Mi ([0-9]+):1`
   - Akai APC Mini: `APC MINI:APC MINI MIDI 1 ([0-9]+):0`
+  - Akai MIDI mix: `MIDI Mix:MIDI Mix MIDI 1 ([0-9]+):0`
 - On macos:
   - Launchpad X: ???
   - LaunchControl: ???
@@ -71,3 +72,4 @@ The port names vary in format by platform;
   - Akai APC40 MK2: `APC40 mkII` (input and output)
   - Akai LPD8 MK2: `LPD8 mk2` (input and output)
   - Akai MPK mini 3: `MPK mini 3` (input and output)
+  - Akai MIDI mix: `MIDI Mix ` (input and output)

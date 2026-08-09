@@ -245,15 +245,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@julusian/midi@npm:^3.8.0":
-  version: 3.8.0
-  resolution: "@julusian/midi@npm:3.8.0"
+"@julusian/midi@npm:3.6.1":
+  version: 3.6.1
+  resolution: "@julusian/midi@npm:3.6.1"
   dependencies:
     node-addon-api: "npm:^6.1.0"
     node-gyp: "npm:latest"
-    pkg-prebuilds: "npm:^1.1.0"
-    tslib: "npm:^2.8.1"
-  checksum: 10c0/6d4d952ada3900b82b25c9c44731ee996bc87936bb5c1a89f0be6751939fe30739ebb76eb34ccf5d26e938e95002d39b09d132e2cf55a6f81fc332756b9c6998
+    pkg-prebuilds: "npm:^1.0.0"
+  checksum: 10c0/de7d5b215cfb89a261909aafe99adb586ba444ca9ba484905eb11ccce5660ea41b58bd890517af6f1faebac5da4cf80544df57e8ef7044108711be446f6d7f81
   languageName: node
   linkType: hard
 
@@ -940,7 +939,7 @@ __metadata:
   dependencies:
     "@companion-module/tools": "npm:^2.7.2"
     "@companion-surface/base": "npm:^1.3.0"
-    "@julusian/midi": "npm:^3.8.0"
+    "@julusian/midi": "npm:3.6.1"
     "@types/node": "npm:^22.19.3"
     eslint: "npm:^9.39.2"
     husky: "npm:^9.1.7"
@@ -2096,7 +2095,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pkg-prebuilds@npm:^1.1.0":
+"pkg-prebuilds@npm:^1.0.0":
   version: 1.1.0
   resolution: "pkg-prebuilds@npm:1.1.0"
   bin:
