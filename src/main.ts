@@ -4,45 +4,12 @@ import { createSurfaceSchema } from './surface-schema.js'
 import { Input, Output } from '@julusian/midi'
 import { DeviceMappings, DeviceMappingsWithRegex, MidiLayoutDefinition } from './tmp-layout.js'
 import { createPincodeMap } from './pincode.js'
+import { getInputs, getOutputs } from './midi-helper.js'
 
 export interface MidiDeviceInfo {
 	inputPortName: string
 	outputPortName?: string
 	layout: MidiLayoutDefinition
-}
-
-function getInputs(): string[] {
-	const input = new Input()
-	const inputs: string[] = []
-	for (let i = 0; i < input.getPortCount(); i++) {
-		let counter = 0
-		const portName = input.getPortName(i)
-		let numberedPortName = portName
-		while (inputs.includes(numberedPortName)) {
-			counter++
-			numberedPortName = `${portName} ${counter}`
-		}
-		inputs.push(numberedPortName)
-	}
-	input.closePort()
-	return inputs
-}
-
-function getOutputs(): string[] {
-	const output = new Output()
-	const outputs: string[] = []
-	for (let i = 0; i < output.getPortCount(); i++) {
-		let counter = 0
-		const portName = output.getPortName(i)
-		let numberedPortName = portName
-		while (outputs.includes(numberedPortName)) {
-			counter++
-			numberedPortName = `${portName} ${counter}`
-		}
-		outputs.push(numberedPortName)
-	}
-	output.closePort()
-	return outputs
 }
 
 const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
@@ -96,16 +63,18 @@ const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
 		const layout: MidiLayoutDefinition = pluginInfo.layout
 
 		const input = new Input()
-		let output: Output | undefined
+		const output = new Output()
 
 		try {
+			const inputPortName = pluginInfo.inputPortName
+			const outputPortName = pluginInfo.outputPortName ?? pluginInfo.inputPortName
+
 			// Use index based off name (as name already gets an index number after the port name when duplicate name), then just indexOf
-			input.openPort(getInputs().indexOf(pluginInfo.inputPortName))
-			output = new Output()
-			output.openPort(getOutputs().indexOf(pluginInfo.outputPortName ?? pluginInfo.inputPortName)) // TODO - check if this is good?
+			input.openPort(getInputs().indexOf(inputPortName))
+			output.openPort(getOutputs().indexOf(outputPortName)) // TODO - check if this is good?
 
 			return {
-				surface: new MidiWrapper(surfaceId, input, output, pluginInfo.inputPortName, context, layout),
+				surface: new MidiWrapper(surfaceId, input, output, inputPortName, outputPortName, context, layout),
 				registerProps: {
 					brightness: layout.supportsBrightness,
 					canChangePage: layout.canChangePage,

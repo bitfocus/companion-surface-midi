@@ -13,15 +13,17 @@ import {
 import type { Input, Output } from '@julusian/midi'
 import { parseControlId } from './util.js'
 import { MidiButtonDefinition, MidiLayoutDefinition } from './tmp-layout.js'
+import { getInputs, getOutputs } from './midi-helper.js'
 
 export class MidiWrapper implements SurfaceInstance {
 	readonly #logger: ModuleLogger
 
 	readonly #input: Input
-	readonly #output: Output | undefined
-	readonly #portName: string
+	readonly #output: Output
+	readonly #inputPortName: string
+	readonly #outputPortName: string
 	readonly #surfaceId: string
-	// readonly #context: SurfaceContext
+	readonly #context: SurfaceContext
 	readonly #layout: MidiLayoutDefinition
 
 	readonly #noteOnOffListeners: Map<number, MidiButtonDefinition> = new Map()
@@ -32,32 +34,43 @@ export class MidiWrapper implements SurfaceInstance {
 	 */
 	readonly #lastColours: Record<string, RgbColor> = {}
 	#brightness: number = 100
+	readonly #checkInterval: NodeJS.Timeout
 
 	public get surfaceId(): string {
 		return this.#surfaceId
 	}
 	public get productName(): string {
-		return this.#portName
+		return this.#inputPortName
 	}
 
 	public constructor(
 		surfaceId: string,
 		input: Input,
-		output: Output | undefined,
-		portName: string,
+		output: Output,
+		inputPortName: string,
+		outputPortName: string,
 		context: SurfaceContext,
 		layout: MidiLayoutDefinition,
 	) {
 		this.#logger = createModuleLogger(`Instance/${surfaceId}`)
 		this.#input = input
 		this.#output = output
-		this.#portName = portName
+		this.#inputPortName = inputPortName
+		this.#outputPortName = outputPortName
 		this.#surfaceId = surfaceId
-		// this.#context = context
+		this.#context = context
 		this.#layout = layout
 
+		this.#checkInterval = setInterval(() => {
+			this.#checkPortStatus()
+				.catch(() => {})
+				.finally(() => {})
+		}, 1e3)
+	}
+
+	async init(): Promise<void> {
 		// Future: could there be multiple listeners for one note?
-		for (const button of layout.buttons) {
+		for (const button of this.#layout.buttons) {
 			const noteIdx = button.channel * 128 + button.note
 			switch (button.type) {
 				case 'noteon':
@@ -76,7 +89,7 @@ export class MidiWrapper implements SurfaceInstance {
 		}
 
 		// Extra buttons that are not really buttons, but just helpful tools
-		for (const button of layout.extraButtons ?? []) {
+		for (const button of this.#layout.extraButtons ?? []) {
 			const noteIdx = button.channel * 128 + button.note
 			switch (button.type) {
 				case 'noteon':
@@ -94,8 +107,8 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		}
 
-		// Extra buttons that are not really buttons, but just helpful tools
-		for (const variable of layout.transferVariables ?? []) {
+		// Extra inputs from the device, such as encoders, etc
+		for (const variable of this.#layout.transferVariables?.filter((variable) => variable.type === 'input') ?? []) {
 			const button: MidiButtonDefinition = {
 				...variable,
 				type: (variable.msg_type + '-encoder') as 'cc-encoder' | 'noteon-encoder',
@@ -111,16 +124,6 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		}
 
-		this.#input.on('message', (deltaTime, message) => {
-			// this.#logger.debug(`m: ${message} d: ${deltaTime}`)
-			const channel = message[0] & 0x0f
-			const type = message[0] & 0xf0
-			if (type === 0x90) input.emit('noteon', message[1], message[2], { channel, deltaTime })
-			else if (type === 0x80) input.emit('noteoff', message[1], message[2], { channel, deltaTime })
-			else if (type === 0xb0) input.emit('cc', message[1], message[2], { channel, deltaTime })
-		})
-
-		// @ts-expect-error yeah
 		this.#input.on('noteon', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteon received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
@@ -132,22 +135,22 @@ export class MidiWrapper implements SurfaceInstance {
 				const { row } = parseControlId(listener.id)
 				if (!isNaN(row)) {
 					if (velocity > 0) {
-						context.keyDownById(listener.id)
+						this.#context.keyDownById(listener.id)
 					} else {
-						context.keyUpById(listener.id)
+						this.#context.keyUpById(listener.id)
 					}
 				} else if (velocity > 0) {
 					// Extra buttons
 					if (this.#layout.canChangePage) {
-						if (listener.id === 'page/left') context.changePage(false)
-						else if (listener.id === 'page/right') context.changePage(true)
+						if (listener.id === 'page/left') this.#context.changePage(false)
+						else if (listener.id === 'page/right') this.#context.changePage(true)
 					}
 				}
 			} else if (listener.type === 'noteon-encoder') {
-				context.sendVariableValue(listener.id, velocity)
+				this.#context.sendVariableValue(listener.id, velocity)
 			}
 		})
-		// @ts-expect-error yeah
+
 		this.#input.on('noteoff', (note, velocity, info) => {
 			this.#logger.debug(`MIDI noteoff received: note=${note} velocity=${velocity} info=${JSON.stringify(info)}`)
 
@@ -158,14 +161,13 @@ export class MidiWrapper implements SurfaceInstance {
 			if (listener.type === 'noteon') {
 				const { row } = parseControlId(listener.id)
 				if (!isNaN(row)) {
-					context.keyUpById(listener.id)
+					this.#context.keyUpById(listener.id)
 				}
 			} else if (listener.type === 'noteon-encoder') {
-				context.sendVariableValue(listener.id, velocity)
+				this.#context.sendVariableValue(listener.id, velocity)
 			}
 		})
 
-		// @ts-expect-error yeah
 		this.#input.on('cc', (param, value, info) => {
 			this.#logger.debug(`MIDI cc received: param=${param} value=${value} info=${JSON.stringify(info)}`)
 
@@ -177,49 +179,49 @@ export class MidiWrapper implements SurfaceInstance {
 				const { row } = parseControlId(listener.id)
 				if (!isNaN(row)) {
 					if (value > 0) {
-						context.keyDownById(listener.id)
+						this.#context.keyDownById(listener.id)
 					} else {
-						context.keyUpById(listener.id)
+						this.#context.keyUpById(listener.id)
 					}
 				} else if (value > 0) {
 					// Extra buttons
 					if (this.#layout.canChangePage) {
-						if (listener.id === 'page/left') context.changePage(false)
-						else if (listener.id === 'page/right') context.changePage(true)
+						if (listener.id === 'page/left') this.#context.changePage(false)
+						else if (listener.id === 'page/right') this.#context.changePage(true)
 					}
 				}
 			} else if (listener.type === 'cc-encoder') {
-				context.sendVariableValue(listener.id, value)
+				this.#context.sendVariableValue(listener.id, value)
 			}
 		})
 
-		// @ts-expect-error yeah
 		this.#input.on('sysex', (bytes) => {
 			if (this.#layout.parseSysex) {
-				// @ts-expect-error yeah
-				this.#layout.parseSysex(context, bytes)
+				this.#layout.parseSysex(this.#context, bytes)
 			}
 		})
 
-		// this.#device.on('error', (e) => context.disconnect(e))
-	}
+		// this.#input.on('error', (e) => context.disconnect(e))
 
-	async init(): Promise<void> {
 		// Start by blanking it
 		await this.blank()
 	}
 
 	async close(): Promise<void> {
-		await this.#clearPanel().catch(() => null)
-		if (this.#output) {
+		this.#logger.debug('Connection closed')
+		clearInterval(this.#checkInterval)
+
+		if (this.#output.isPortOpen()) {
+			await this.#clearPanel().catch(() => null)
+
 			const commands = this.#layout.command_shutdown()
 			for (const command of commands) this.#output.sendMessage(command)
 		}
 
 		this.#input.closePort()
 		this.#input.destroy()
-		this.#output?.closePort()
-		this.#output?.destroy()
+		this.#output.closePort()
+		this.#output.destroy()
 	}
 
 	updateCapabilities(_capabilities: HostCapabilities): void {
@@ -245,6 +247,8 @@ export class MidiWrapper implements SurfaceInstance {
 	}
 
 	async draw(_signal: AbortSignal, drawProps: SurfaceDrawProps): Promise<void> {
+		if (!this.#output.isPortOpen()) return
+
 		let color = drawProps.color ? parseColor(drawProps.color) : { r: 0, g: 0, b: 0 }
 		// Grab bitmap one pixel color if provided. This will make sure we can kind of provide a color change when pressed...
 		if (drawProps.image && drawProps.image.length >= 3) {
@@ -274,23 +278,69 @@ export class MidiWrapper implements SurfaceInstance {
 	}
 
 	#writeKeyColour(controlId: string, color: RgbColor): void {
+		if (!this.#output.isPortOpen()) return
+
 		if (this.#layout.supportsBrightness) {
 			const scale = (this.#brightness || 100) / 100
 			color = { r: color.r * scale, g: color.g * scale, b: color.b * scale }
 		}
 
 		const fillBuffer = this.#layout.command_writeKeyColour(controlId, color)
-		if (this.#output && fillBuffer.length > 0) this.#output.sendMessage(fillBuffer)
+		if (fillBuffer.length > 0) this.#output.sendMessage(fillBuffer)
 	}
 
 	async #clearPanel(): Promise<void> {
-		if (!this.#output) return
+		if (!this.#output.isPortOpen()) return
 		const commands = this.#layout.command_clearPanel()
 		for (const command of commands) this.#output.sendMessage(command)
 	}
 
 	async showStatus(_signal: AbortSignal, _cardGenerator: CardGenerator, _statusMessage: string): Promise<void> {
-		// Nothing to display here
-		// TODO - do some flashing lights to indicate each status?
+		/*
+		const ids = this.#layout.buttons.map((a) => parseControlId(a.id))
+		const width = Math.max(...ids.map((id) => id.column))
+		const height = Math.max(...ids.map((id) => id.row))
+		const pixels = await _cardGenerator.generateLogoCard(width, height, 'rgb')
+
+		let btn = 0
+		for (let i = 0; i < pixels.length; i += 3) {
+			this.#writeKeyColour(this.#layout.buttons[btn++].id, { r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] })
+		}
+		*/
+	}
+
+	onVariableValue(id: string, value: unknown): void {
+		if (!this.#output.isPortOpen()) return
+		const variable = this.#layout.transferVariables
+			?.filter((variable) => variable.type === 'output')
+			.find((variable) => variable.id === id)
+		if (variable && typeof value === 'number' && value >= 0 && value <= 127) {
+			variable.callback(this.#output, value)
+		}
+	}
+
+	async #checkPortStatus(): Promise<void> {
+		let disconnected: boolean = false
+		if (!this.#input.isPortOpen()) {
+			this.#context.disconnect(new Error('Input port closed'))
+			disconnected = true
+		} else if (!this.#output.isPortOpen()) {
+			this.#context.disconnect(new Error('Output port closed'))
+			disconnected = true
+		} else if (!getInputs().includes(this.#inputPortName)) {
+			this.#input.closePort()
+			this.#output.closePort()
+			this.#context.disconnect(new Error('Input port is lost'))
+			disconnected = true
+		} else if (!getOutputs().includes(this.#outputPortName)) {
+			this.#input.closePort()
+			this.#output.closePort()
+			this.#context.disconnect(new Error('Output port is lost'))
+			disconnected = true
+		}
+
+		if (disconnected) {
+			clearInterval(this.#checkInterval)
+		}
 	}
 }

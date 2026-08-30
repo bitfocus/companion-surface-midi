@@ -1,19 +1,6 @@
-import { RgbColor, SurfaceContext, SurfaceInputVariable } from '@companion-surface/base'
-import { MidiMessage } from '@julusian/midi'
+import { RgbColor, SurfaceContext, SurfaceInputVariable, SurfaceOutputVariable } from '@companion-surface/base'
+import { MidiMessage, Output } from '@julusian/midi'
 import { getClosestApcColor, getClosestApcMiniColor, getClosestLpColor, parseControlId } from './util.js'
-
-export interface MidiLayoutDefinition {
-	supportsBrightness: boolean
-	canChangePage?: { label: string } | undefined
-	buttons: MidiButtonDefinition[]
-	extraButtons?: (MidiButtonDefinition & { id: 'page/left' | 'page/right' })[]
-	transferVariables?: Array<SurfaceInputVariable & Omit<MidiButtonDefinition, 'type'> & { msg_type: 'noteon' | 'cc' }>
-	command_clearPanel: () => MidiMessage[]
-	command_shutdown: () => MidiMessage[]
-	command_writeKeyColour: (controlId: string, color: RgbColor) => MidiMessage
-	isColorTooBlack: (color: RgbColor) => boolean
-	parseSysex?: (context: SurfaceContext, bytes: Buffer<ArrayBufferLike>) => void
-}
 
 export interface MidiButtonDefinition {
 	id: string
@@ -21,6 +8,22 @@ export interface MidiButtonDefinition {
 	type: 'noteon' | 'cc' | 'cc-encoder' | 'noteon-encoder'
 	channel: number
 	note: number
+}
+
+export interface MidiLayoutDefinition {
+	supportsBrightness: boolean
+	canChangePage?: { label: string } | undefined
+	buttons: MidiButtonDefinition[]
+	extraButtons?: (MidiButtonDefinition & { id: 'page/left' | 'page/right' })[]
+	transferVariables?: Array<
+		| (SurfaceInputVariable & Omit<MidiButtonDefinition, 'type'> & { msg_type: 'noteon' | 'cc' })
+		| (SurfaceOutputVariable & { callback: (output: Output, value: unknown) => void })
+	>
+	command_clearPanel: () => MidiMessage[]
+	command_shutdown: () => MidiMessage[]
+	command_writeKeyColour: (controlId: string, color: RgbColor) => MidiMessage
+	isColorTooBlack: (color: RgbColor) => boolean
+	parseSysex?: (context: SurfaceContext, bytes: Buffer<ArrayBufferLike>) => void
 }
 
 ///////////////////////////////
@@ -723,6 +726,30 @@ const NovationLaunchkeyMiniMK3Layout: MidiLayoutDefinition = {
 			msg_type: 'cc',
 			channel: 15,
 			note: 28,
+		},
+		{
+			id: 'output-play-btn',
+			name: 'Play button light up',
+			description: '0 = Off, 1-126 = Dimmed on, 127 = Bright on',
+			type: 'output',
+			callback(output: Output, value: unknown): void {
+				if (typeof value === 'number' && value >= 0 && value <= 127) {
+					// CC ch=15, control=115
+					output.sendMessage([0xb0 | (15 & 0x0f), 115 & 0x7f, value & 0x7f])
+				}
+			},
+		},
+		{
+			id: 'output-rec-btn',
+			name: 'Capture MIDI button light up',
+			description: '0 = Off, 1-126 = Dimmed on, 127 = Bright on',
+			type: 'output',
+			callback(output: Output, value: unknown): void {
+				if (typeof value === 'number' && value >= 0 && value <= 127) {
+					// CC ch=15, control=117
+					output.sendMessage([0xb0 | (15 & 0x0f), 115 & 0x7f, value & 0x7f])
+				}
+			},
 		},
 	],
 	command_clearPanel: function () {
@@ -1658,6 +1685,8 @@ const AkaiMIDImixLayout: MidiLayoutDefinition = {
 		return Math.floor(color.r / 64) === 0 && Math.floor(color.g / 64) === 0 && Math.floor(color.b / 64) === 0
 	},
 }
+
+// https://www.bax-shop.nl/downloads/products/9000-0072-1850/ayra_digicon-1_user_manual_20210428.pdf
 
 export const DeviceMappings: { [input: string]: { outputName?: string; layout?: MidiLayoutDefinition } } = {
 	// Launchpad Mini MK2
