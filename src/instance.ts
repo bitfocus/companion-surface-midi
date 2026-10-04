@@ -284,7 +284,7 @@ export class MidiWrapper implements SurfaceInstance {
 			if (drawProps.pressed === true) {
 				color = {
 					r: 255,
-					g: 0,
+					g: 198,
 					b: 0,
 				}
 			}
