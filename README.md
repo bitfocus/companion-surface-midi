@@ -51,7 +51,7 @@ While developing the module, by using `yarn dev` the compiler will be run in wat
 
 The port names vary in format by platform;
 
-- On linux:
+- On Linux:
   - Launchpad Mini MK2: `Launchpad Mini:Launchpad Mini MIDI 1 ([0-9]+):0` is common
   - Launchpad Pro MK2: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
   - Launchpad MK2: `Launchpad MK2:Launchpad MK2 MIDI 1 ([0-9]+):0`
@@ -62,14 +62,14 @@ The port names vary in format by platform;
     - `Launchkey Mini MK3:Launchkey Mini MK3 MIDI 2 ([0-9]+):1` OR `Launchkey Mini MK3:Launchkey Mini MK3 Launchkey Mi ([0-9]+):1`
   - Akai APC Mini: `APC MINI:APC MINI MIDI 1 ([0-9]+):0`
   - Akai MIDI mix: `MIDI Mix:MIDI Mix MIDI 1 ([0-9]+):0`
-- On macos:
+- On MacOS:
   - Launchpad X: ???
   - LaunchControl: ???
-- On windows:
+- On Windows:
   - Launchpad Mini MK2: ???
   - Launchpad Pro MK2: `Launchpad Pro` (input and output)
   - Launchpad MK2: `Launchpad MK2` (input and output)
-  - Launchpad Mini MK3: `LPMiniMK3 MIDI` (input and output)
+  - Launchpad Mini MK3: `MIDIIN2 (Launchpad Mini MK3)` with output `MIDIOUT2 (Launchpad Mini MK3)` for DAW control
   - Launchpad Pro MK3: ???
   - Launchpad X: `LPX MIDI` (input and output)
   - Launchkey Mini MK3: `MIDIIN2 (Launchkey Mini MK3)` with output `MIDIOUT2 (Launchkey Mini MK3)` for DAW control
