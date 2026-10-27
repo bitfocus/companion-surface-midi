@@ -1802,8 +1802,8 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 		layout: NovationLaunchpadMiniMK3Layout,
 	},
 	// - Windows:
-	'LPMiniMK3 MIDI': {
-		outputName: undefined, // Uses same name as input
+	'MIDIIN2 (LPMiniMK3 MIDI)': {
+		outputName: 'MIDIOUT2 (LPMiniMK3 MIDI)',
 		layout: NovationLaunchpadMiniMK3Layout,
 	},
 
