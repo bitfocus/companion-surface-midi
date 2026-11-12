@@ -1,4 +1,10 @@
-import type { RgbColor, SurfaceContext, SurfaceInputVariable, SurfaceOutputVariable } from '@companion-surface/base'
+import {
+	createModuleLogger,
+	type RgbColor,
+	type SurfaceContext,
+	type SurfaceInputVariable,
+	type SurfaceOutputVariable,
+} from '@companion-surface/base'
 import type { MidiMessage, Output } from '@julusian/midi/lazy'
 import { getClosestApcColor, getClosestApcMiniColor, getClosestLpColor, parseControlId } from './util.js'
 
@@ -48,7 +54,7 @@ export interface MidiLayoutDefinition {
 // Launchpad MK2 collection: //
 ///////////////////////////////
 
-// TODO still needs testing
+// TODO still needs testing but should work
 const NovationLaunchpadMiniLayoutTest: MidiLayoutDefinition = {
 	// https://fael-downloads-prod.focusrite.com/customer/prod/s3fs-public/novation/downloads/10780/launchpad-s-and-mini-advanced-features-guide.pdf
 	// Not really helpful documentation tho.
@@ -162,7 +168,14 @@ const NovationLaunchpadMiniLayoutTest: MidiLayoutDefinition = {
 	command_writeKeyColour: function (controlId, color) {
 		const { column: x, row: y } = parseControlId(controlId)
 		if (isNaN(x) || x < 0 || isNaN(y) || y < 0) return []
-		return [0x0f, (x + 1) & 0x7f, (y + 1) & 0x7f, color.r & 0x7f, color.g & 0x7f, color.b & 0x7f]
+		return [
+			0x0f,
+			(x + 1) & 0x7f,
+			(y + 1) & 0x7f,
+			(color.r >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.g >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.b >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+		]
 	},
 	isColorTooBlack: function (color) {
 		return Math.floor(color.r / 32) === 0 && Math.floor(color.g / 32) === 0 && Math.floor(color.b / 32) === 0
@@ -314,9 +327,9 @@ const NovationLaunchpadProLayout: MidiLayoutDefinition = {
 			0x10,
 			0x0b,
 			button.note & 0x7f,
-			Math.floor(color.r / 4) & 0x3f, // 0 to 64 instead of 0 to 255 -> 255 / 4 = 64
-			Math.floor(color.g / 4) & 0x3f, // 0 to 64 instead of 0 to 255 -> 255 / 4 = 64
-			Math.floor(color.b / 4) & 0x3f, // 0 to 64 instead of 0 to 255 -> 255 / 4 = 64
+			(color.r >> 2) & 0x3f, // 0 to 64 instead of 0 to 255, which is two divisions
+			(color.g >> 2) & 0x3f, // 0 to 64 instead of 0 to 255, which is two divisions
+			(color.b >> 2) & 0x3f, // 0 to 64 instead of 0 to 255, which is two divisions
 			0xf7,
 		]
 	},
@@ -442,9 +455,9 @@ const NovationLaunchpadMK2Layout: MidiLayoutDefinition = {
 			0x18,
 			0x0b,
 			button.note & 0x7f,
-			Math.floor(color.r / 4) & 0x3f, // 0 to 64 instead of 0 to 255 -> 255 / 4 = 64
-			Math.floor(color.g / 4) & 0x3f, // 0 to 64 instead of 0 to 255 -> 255 / 4 = 64
-			Math.floor(color.b / 4) & 0x3f, // 0 to 64 instead of 0 to 255 -> 255 / 4 = 64
+			(color.r >> 2) & 0x3f, // 0 to 64 instead of 0 to 255, which is two divisions
+			(color.g >> 2) & 0x3f, // 0 to 64 instead of 0 to 255, which is two divisions
+			(color.b >> 2) & 0x3f, // 0 to 64 instead of 0 to 255, which is two divisions
 			0xf7,
 		]
 	},
@@ -454,7 +467,7 @@ const NovationLaunchpadMK2Layout: MidiLayoutDefinition = {
 // Launchpad MK3 collection: //
 ///////////////////////////////
 
-// TODO still needs testing
+// TODO still needs testing but should work
 const NovationLaunchpadXMK3Layout: MidiLayoutDefinition = {
 	// https://fael-downloads-prod.focusrite.com/customer/prod/s3fs-public/downloads/Launchpad%20X%20-%20Programmers%20Reference%20Manual.pdf
 	...NovationLaunchpadProLayout, // Same clearPanel and shutdown functions!
@@ -571,9 +584,9 @@ const NovationLaunchpadXMK3Layout: MidiLayoutDefinition = {
 			0x03,
 			0x03, // lighting type 3 is RGB
 			button.note & 0x7f,
-			Math.floor(color.r / 2) & 0x7f,
-			Math.floor(color.g / 2) & 0x7f,
-			Math.floor(color.b / 2) & 0x7f,
+			(color.r >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.g >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.b >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
 			0xf7,
 		] // There's a chance this might work
 
@@ -608,9 +621,9 @@ const NovationLaunchpadProMK3Layout: MidiLayoutDefinition = {
 			0x03,
 			0x03, // lighting type 3 is RGB
 			button.note & 0x7f,
-			Math.floor(color.r / 2) & 0x7f,
-			Math.floor(color.g / 2) & 0x7f,
-			Math.floor(color.b / 2) & 0x7f,
+			(color.r >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.g >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.b >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
 			0xf7,
 		]
 	},
@@ -642,9 +655,9 @@ const NovationLaunchpadMiniMK3Layout: MidiLayoutDefinition = {
 			0x03,
 			0x03, // lighting type 3 is RGB
 			button.note & 0x7f,
-			Math.floor(color.r / 2) & 0x7f,
-			Math.floor(color.g / 2) & 0x7f,
-			Math.floor(color.b / 2) & 0x7f,
+			(color.r >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.g >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
+			(color.b >> 1) & 0x7f, // 0 to 127 instead of 0 to 255, which is one division
 			0xf7,
 		]
 	},
@@ -1100,7 +1113,7 @@ const AkaiAPCMiniLayout: MidiLayoutDefinition = {
 	},
 }
 
-// TODO still needs testing? I forgot
+// TODO still needs testing? I forgot, but should work
 const AkaiAPC40MK2Layout: MidiLayoutDefinition = {
 	// https://cdn.inmusicbrands.com/akai/attachments/apc40II/APC40Mk2_Communications_Protocol_v1.2.pdf
 	...AkaiAPCMiniLayout,
@@ -1438,7 +1451,7 @@ const AkaiMpkMiniMk3Layout: MidiLayoutDefinition = {
 	},
 }
 
-// TODO still needs testing
+// TODO still needs testing but should work
 const AkaiMIDImixLayout: MidiLayoutDefinition = {
 	// https://cdn.inmusicbrands.com/akai/attachments/MIDIMIX/MIDImix-UserGuide-v1.0.pdf
 	supportsBrightness: false, // doesn't even support color...
@@ -1795,6 +1808,20 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 		layout: NovationLaunchpadMK2Layout,
 	},
 
+	// Launchpad X MK3
+	// - Windows:
+	'LPX MIDI': {
+		outputName: undefined,
+		layout: NovationLaunchpadXMK3Layout,
+	},
+
+	// Launchpad Pro MK3
+	// - Windows: I did have the mapping layout, but the person who was going to try it, never replied back
+	// '???': {
+	// 	outputName: '???',
+	// 	layout: NovationLaunchpadProMK3Layout,
+	// },
+
 	// Launchpad Mini MK3
 	// - Linux:
 	'/Launchpad Mini MK3:Launchpad Mini MK3 LPMiniMK3 MI ([0-9]+):1/': {
@@ -1805,20 +1832,6 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 	'MIDIIN2 (LPMiniMK3 MIDI)': {
 		outputName: 'MIDIOUT2 (LPMiniMK3 MIDI)',
 		layout: NovationLaunchpadMiniMK3Layout,
-	},
-
-	// Launchpad Pro MK3
-	// - Windows:
-	// '???': {
-	// 	outputName: '???',
-	// 	layout: NovationLaunchpadProMK3Layout,
-	// },
-
-	// Launchpad X MK3
-	// - Windows:
-	'LPX MIDI': {
-		outputName: undefined,
-		layout: NovationLaunchpadXMK3Layout,
 	},
 
 	// Launchkey Mini MK3
@@ -1837,18 +1850,6 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 		layout: NovationLaunchkeyMiniMK3Layout,
 	},
 
-	// Akai APC Mini
-	// - Linux:
-	'/APC MINI:APC MINI MIDI 1 ([0-9]+):0/': {
-		outputName: undefined, // Uses same name as input
-		layout: AkaiAPCMiniLayout,
-	},
-	// - Windows:
-	'APC MINI': {
-		outputName: undefined, // Uses same name as input
-		layout: AkaiAPCMiniLayout,
-	},
-
 	// Akai APC Mini MK2
 	// - Linux: Unsure if this is try or not, but at least it comes close?
 	// '/APC MINI:APC mini mk2 MIDI 1 ([0-9]+):0/': {
@@ -1861,6 +1862,18 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 		layout: AkaiAPCMiniMK2Layout,
 	},
 
+	// Akai APC Mini
+	// - Linux:
+	'/APC MINI:APC MINI MIDI 1 ([0-9]+):0/': {
+		outputName: undefined, // Uses same name as input
+		layout: AkaiAPCMiniLayout,
+	},
+	// - Windows:
+	'APC MINI': {
+		outputName: undefined, // Uses same name as input
+		layout: AkaiAPCMiniLayout,
+	},
+
 	// Akai APC 40 mk2
 	// - Windows:
 	'APC40 mkII': {
@@ -1869,11 +1882,11 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 	},
 
 	// Akai LPD8 MK2
-	// - Windows:
-	'LPD8 mk2': {
-		outputName: undefined, // Uses same name as input
-		layout: undefined,
-	},
+	// - Windows: The port name is correct, but the mappings were never found. Original user did not respond back.
+	// 'LPD8 mk2': {
+	// 	outputName: undefined, // Uses same name as input
+	// 	layout: undefined,
+	// },
 
 	// Akai MPK Mini MK3
 	// - Windows and Fedora:
@@ -1895,6 +1908,7 @@ export const DeviceMappings: { [input: string]: { outputName?: string; layout?: 
 	},
 }
 
+const logger = createModuleLogger('Layout')
 export const DeviceMappingsWithRegex: { regex: RegExp; name: string }[] = Object.keys(DeviceMappings)
 	.map((name) => {
 		// Only include regex'ed port names, skip the rest:
@@ -1903,7 +1917,7 @@ export const DeviceMappingsWithRegex: { regex: RegExp; name: string }[] = Object
 			// Make sure to match the WHOLE string, instead of doing a contains, by adding the ^ and $ and the m flag
 			return { regex: new RegExp('^' + name.substring(1, name.length - 1) + '$', 'm'), name }
 		} catch (e) {
-			console.error('Regex failure for "' + name + '". error being:', e)
+			logger.error('Regex failure for "' + name + '". error being: ' + e)
 			return undefined
 		}
 	})

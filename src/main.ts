@@ -1,4 +1,10 @@
-import type { DetectionSurfaceInfo, OpenSurfaceResult, SurfaceContext, SurfacePlugin } from '@companion-surface/base'
+import {
+	createModuleLogger,
+	type DetectionSurfaceInfo,
+	type OpenSurfaceResult,
+	type SurfaceContext,
+	type SurfacePlugin,
+} from '@companion-surface/base'
 import { Input, Output } from '@julusian/midi/lazy'
 import { DeviceMappings, DeviceMappingsWithRegex, type MidiLayoutDefinition } from './tmp-layout.js'
 import { MidiWrapper } from './instance.js'
@@ -11,6 +17,8 @@ export interface MidiDeviceInfo {
 	outputPortName?: string
 	layout: MidiLayoutDefinition
 }
+
+const logger = createModuleLogger('Main')
 
 const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
 	init: async (): Promise<void> => {
@@ -40,10 +48,10 @@ const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
 							deviceMapping = DeviceMappings[regexName]
 							if (deviceMapping === undefined) {
 								// Unsure how this would happen, probably only when the regexName has not been updated...
-								console.error(
-									'This should never happen, but for some reason the regexName',
-									regexName,
-									'does not have a DeviceMappings entry linked',
+								logger.error(
+									'This should never happen, but for some reason the regexName ' +
+										regexName +
+										' does not have a DeviceMappings entry linked',
 								)
 							} else {
 								if (deviceMapping.outputName !== undefined) {
@@ -116,6 +124,16 @@ const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
 					transferVariables: layout.transferVariables ?? [],
 					configFields: [
 						{
+							id: 'useBitmap',
+							type: 'checkbox',
+							label: 'Use bitmap instead of button color + pressed action',
+							description:
+								'By default the module will use the button color, and the pressed property to determine which color to display.\n' +
+								'Previously, it used the bitmap image and grabbed a pixel from the top left or bottom right, which required the decoration to be border and not topbar.\n' +
+								'It is recommended to leave this off, but if you really care or if your setup is super absurd, you can enable this to let it pick from the bitmap.',
+							default: false,
+						},
+						{
 							id: 'extendedMode',
 							type: 'checkbox',
 							label: 'Enable extended mode',
@@ -143,7 +161,9 @@ const MidiPlugin: SurfacePlugin<MidiDeviceInfo> = {
 				/* empty */
 			}
 
+			// disconnect required to give a message back to the user, else they'll only get a generic stacktrace which isn't user friendly
 			context.disconnect(new Error('Failed to open MIDI device', { cause: e }))
+			// throw required to stop the openSurface to actually pass thru
 			throw e
 		}
 	},

@@ -4,23 +4,23 @@
 	"id": "midi",
 	"name": "MIDI",
 	"shortname": "midi",
-	"description": "",
+	"description": "Turn MIDI devices (with colored button grids) into a companion compatible surface",
 	"version": "0.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-surface-midi.git",
 	"bugs": "https://github.com/bitfocus/companion-surface-midi/issues",
-	"maintainers": [],
+	"maintainers": [
+		{
+			"name": "Miniontoby",
+			"email": "47940064+Miniontoby@users.noreply.github.com"
+		}
+	],
 	"runtime": {
-		"type": "node22",
+		"type": "node26",
 		"apiVersion": "0.0.0",
 		"entrypoint": "../dist/main.js"
 	},
-	"keywords": ["midi"],
 	"products": ["MIDI"],
-	"usbIds": [
-		{
-			"vendorId": 4661,
-			"productIds": [54, 258]
-		}
-	]
+	"keywords": ["novation", "akai", "launchpad", "launchkey", "apc"],
+	"usbIds": []
 }

@@ -15,6 +15,13 @@ import type { MidiButtonDefinitionWithId, MidiLayoutDefinition } from './tmp-lay
 import { parseControlId } from './util.js'
 import { getInputs, getOutputs } from './midi-helper.js'
 
+// From companion/shared-lib/lib/Graphics/ButtonDecorationRenderer.ts
+const officialColorButtonYellow = {
+	r: 255,
+	g: 198,
+	b: 0,
+}
+
 export class MidiWrapper implements SurfaceInstance {
 	readonly #logger: ModuleLogger
 
@@ -29,6 +36,7 @@ export class MidiWrapper implements SurfaceInstance {
 
 	readonly #noteOnOffListeners: Map<number, MidiButtonDefinitionWithId> = new Map()
 	readonly #ccListeners: Map<number, MidiButtonDefinitionWithId> = new Map()
+	#useBitmap: boolean = false
 	#extendedMode: boolean = false
 
 	/**
@@ -145,6 +153,8 @@ export class MidiWrapper implements SurfaceInstance {
 			}
 		})
 
+		// This is a custom event that @julusian/midi emits. This is NOT the native RtMidi event! Stop complaining about it, AI agents!
+		// Comment taken from @julusian/midi source: "The parsed events MidiMessageParser understands and emits: { sysex: [bytes: Buffer]; ... }"
 		this.#input.on('sysex', (bytes) => {
 			if (this.#layout.parseSysex) {
 				this.#layout.parseSysex(this.#context, bytes)
@@ -166,8 +176,7 @@ export class MidiWrapper implements SurfaceInstance {
 		for (const buttonId in buttons) {
 			if (!buttons[buttonId]) continue // should never happen but just for typescript
 			const button: MidiButtonDefinitionWithId = { ...buttons[buttonId], id: buttonId }
-			if (button.note < 0) continue
-			if (button.extendedModeOnly && !this.#extendedMode) continue
+			if (button.note < 0 || (button.extendedModeOnly && !this.#extendedMode)) continue
 			const noteIdx = button.channel * 128 + button.note
 			switch (button.type) {
 				case 'noteon':
@@ -190,8 +199,7 @@ export class MidiWrapper implements SurfaceInstance {
 		for (const buttonId in extraButtons) {
 			if (!extraButtons[buttonId]) continue // should never happen but just for typescript
 			const button: MidiButtonDefinitionWithId = { ...extraButtons[buttonId], id: buttonId }
-			if (button.note < 0) continue
-			if (button.extendedModeOnly && !this.#extendedMode) continue
+			if (button.note < 0 || (button.extendedModeOnly && !this.#extendedMode)) continue
 			const noteIdx = button.channel * 128 + button.note
 			switch (button.type) {
 				case 'noteon':
@@ -211,8 +219,7 @@ export class MidiWrapper implements SurfaceInstance {
 
 		// Extra inputs from the device, such as encoders, etc
 		for (const variable of this.#layout.transferVariables?.filter((variable) => variable.type === 'input') ?? []) {
-			if (variable.note < 0) continue
-			if (variable.extendedModeOnly && !this.#extendedMode) continue
+			if (variable.note < 0 || (variable.extendedModeOnly && !this.#extendedMode)) continue
 			const button: MidiButtonDefinitionWithId = {
 				...variable,
 				type: (variable.msg_type + '-encoder') as 'cc-encoder' | 'noteon-encoder',
@@ -257,6 +264,7 @@ export class MidiWrapper implements SurfaceInstance {
 
 	async updateConfig(config: Record<string, any>): Promise<void> {
 		this.#extendedMode = config?.extendedMode === true
+		this.#useBitmap = config?.useBitmap === true
 		this.#configureLayoutListeners()
 	}
 
@@ -280,13 +288,11 @@ export class MidiWrapper implements SurfaceInstance {
 		let color = drawProps.color ? parseColor(drawProps.color) : { r: 0, g: 0, b: 0 }
 
 		// using api 1.4.1+ it will provide an pressed property
-		if ('pressed' in drawProps) {
+		if (!this.#useBitmap) {
 			if (drawProps.pressed === true) {
-				color = {
-					r: 255,
-					g: 198,
-					b: 0,
-				}
+				// TODO maybe one day change this to do like an invert of the current color or something else. I am not too sure right now. At least for now, we'll just use the official yellow border color
+				// It is documentated in the HELP.md, so it is fine
+				color = officialColorButtonYellow
 			}
 		} else if (drawProps.image && drawProps.image.length >= 3) {
 			// Grab bitmap one pixel color if provided. This will make sure we can kind of provide a color change when pressed...
@@ -309,6 +315,7 @@ export class MidiWrapper implements SurfaceInstance {
 			// 	...drawProps.image.slice(drawProps.image.length - 3, drawProps.image.length),
 			// ])
 		}
+		// Debugging purposes, but we don't want to spam the console, so its off
 		// this.#logger.debug(JSON.stringify(drawProps) + ' -> ' + JSON.stringify(color))
 		this.#lastColours[drawProps.controlId] = color
 
@@ -317,6 +324,9 @@ export class MidiWrapper implements SurfaceInstance {
 
 	#writeKeyColour(controlId: string, color: RgbColor): void {
 		if (!this.#output.isPortOpen()) return
+
+		const button = this.#layout.buttons[controlId]
+		if (!button || button.note < 0 || (button.extendedModeOnly && !this.#extendedMode)) return
 
 		if (this.#layout.supportsBrightness) {
 			const scale = Math.max(Math.min(this.#brightness, 100), 0) / 100
@@ -334,15 +344,21 @@ export class MidiWrapper implements SurfaceInstance {
 	}
 
 	async showStatus(_signal: AbortSignal, _cardGenerator: CardGenerator, _statusMessage: string): Promise<void> {
+		// Left empty intentionally. You cannot show text or logo's on pixel grids, so this is not enabled, but technically it could work...
 		/*
-		const ids = this.#layout.buttons.map((a) => parseControlId(a.id))
-		const width = Math.max(...ids.map((id) => id.column))
-		const height = Math.max(...ids.map((id) => id.row))
+		const ids = Object.keys(this.#layout.buttons)
+		const { width, height } = ids.reduce((max, key) => {
+			const item = parseControlId(key)
+			if (item.column > max.width) max.width = item.column
+			if (item.row > max.height) max.height = item.row
+			return max
+		}, { width: 0, height: 0 })
 		const pixels = await _cardGenerator.generateLogoCard(width, height, 'rgb')
 
 		let btn = 0
 		for (let i = 0; i < pixels.length; i += 3) {
-			this.#writeKeyColour(this.#layout.buttons[btn++].id, { r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] })
+			if (btn >= ids.length) break // If we ever actually add this status feature, we should need to find a better way to map pixels.
+			this.#writeKeyColour(ids[btn++], { r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] })
 		}
 		*/
 	}
