@@ -1,8 +1,10 @@
 name: Device Request
 description: Request a new MIDI device to be added to this module
-title: '[New Device]: '
+title: '[Device]: '
+type: enhancement
 labels:
   - enhancement
+  - Device Request
 body:
   - type: checkboxes
     attributes:
@@ -74,9 +76,9 @@ body:
         The MIDI input port name that should be used to check for button presses, per platform. (Check above for instructions)
 
         examples:
-          - **Linux**: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
-          - **Windows**: `Launchpad Pro`
-          - **Mac**: Unknown
+          - Linux: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
+          - Windows: `Launchpad Pro`
+          - Mac: `Unknown`
       value: |
           - Linux:
           - Windows:
@@ -92,9 +94,9 @@ body:
         The MIDI output port name that should be used to provide feedback and colors to the buttons, per platform. (Check above for instructions)
 
         examples:
-          - **Linux**: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
-          - **Windows**: `Launchpad Pro`
-          - **Mac**: Unknown
+          - Linux: `Launchpad Pro:Launchpad Pro Live Port ([0-9]+):0`
+          - Windows: `Launchpad Pro`
+          - Mac: `Unknown`
       value: |
           - Linux:
           - Windows:
@@ -125,7 +127,7 @@ body:
   - type: textarea
     id: extra-buttons
     attributes:
-      label: Device contains seperate buttons
+      label: Device contains separate buttons
       description: |
         Does this device contain **extra** buttons with a label for like Left/Right or Up/Down?  
         And if so, which midi command/bytes/channel/note are those being send to/received from?
